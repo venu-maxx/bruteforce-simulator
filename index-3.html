@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BRUTEFORCE//SIM - Advanced Attack Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00ff41;
+    --green-dim: #00aa2b;
+    --green-dark: #003b10;
+    --red: #ff003c;
+    --red-dark: #3b0010;
+    --yellow: #ffe600;
+    --orange: #ff6600;
+    --cyan: #00ffff;
+    --purple: #cc00ff;
+    --bg: #04000a;
+    --panel: #080010;
+    --border: #cc00ff33;
+    --text: #e0b0ff;
+  }
+  * { margin:0;padding:0;box-sizing:border-box; }
+  body {
+    background:var(--bg);color:var(--purple);
+    font-family:'Share Tech Mono',monospace;
+    min-height:100vh;overflow-x:hidden;cursor:crosshair;
+  }
+  body::before {
+    content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(204,0,255,0.012) 2px,rgba(204,0,255,0.012) 4px);
+    pointer-events:none;z-index:999;
+  }
+  #matrix{position:fixed;top:0;left:0;width:100%;height:100%;opacity:0.07;z-index:0;pointer-events:none;}
+
+  .container{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:18px 14px 50px;}
+
+  /* Header */
+  .header{text-align:center;margin-bottom:24px;animation:fadeDown 0.8s ease;}
+  .header-tag{font-size:10px;color:#aa00cc;letter-spacing:4px;margin-bottom:6px;}
+  .logo{
+    font-family:'Orbitron',monospace;font-size:clamp(18px,7vw,44px);font-weight:900;
+    color:var(--purple);text-shadow:0 0 20px var(--purple),0 0 50px #8800aa;
+    letter-spacing:3px;animation:glitch 4s infinite;line-height:1.1;
+  }
+  .logo span{color:var(--red);text-shadow:0 0 20px var(--red);}
+  .subtitle{font-size:10px;color:#8800aa;letter-spacing:5px;margin-top:5px;}
+  .author-tag{margin-top:8px;font-size:11px;color:#cc00ff44;}
+  .author-tag a{color:#aa00cc;text-decoration:none;}
+
+  /* Warning Banner */
+  .warning-banner{
+    background:#1a0000;border:1px solid var(--red);border-radius:4px;
+    padding:12px 16px;margin-bottom:14px;text-align:center;
+    animation:pulse-red 2s infinite;
+  }
+  .warning-banner .w-title{color:var(--red);font-family:'Orbitron',monospace;font-size:12px;letter-spacing:3px;margin-bottom:4px;}
+  .warning-banner .w-text{color:#ff6666;font-size:11px;line-height:1.6;}
+
+  /* Panel */
+  .panel{
+    background:var(--panel);border:1px solid var(--border);
+    border-radius:4px;padding:18px;margin-bottom:12px;
+    position:relative;animation:fadeUp 0.6s ease both;
+  }
+  .panel::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,var(--purple),transparent);
+  }
+  .panel-title{font-size:10px;letter-spacing:3px;color:#8800aa;margin-bottom:14px;}
+
+  /* Tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;}
+  .tab{
+    padding:8px 14px;background:#000;border:1px solid #1a0030;
+    border-radius:3px;cursor:pointer;font-family:'Share Tech Mono',monospace;
+    font-size:11px;color:#660099;letter-spacing:1px;transition:all 0.2s;
+  }
+  .tab.active{background:#1a0030;border-color:var(--purple);color:var(--purple);box-shadow:0 0 8px #cc00ff44;}
+
+  .tab-content{display:none;}
+  .tab-content.active{display:block;}
+
+  /* Input */
+  .inp-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .inp-group{display:flex;flex-direction:column;gap:5px;flex:1;min-width:120px;}
+  .inp-label{font-size:10px;color:#8800aa;letter-spacing:2px;}
+  .inp{
+    width:100%;background:#000;border:1px solid #440066;
+    color:var(--purple);font-family:'Share Tech Mono',monospace;
+    font-size:13px;padding:10px 12px;border-radius:3px;
+    outline:none;transition:all 0.3s;caret-color:var(--purple);
+  }
+  .inp:focus{border-color:var(--purple);box-shadow:0 0 10px #cc00ff22;}
+  .inp::placeholder{color:#44006644;}
+  select.inp option{background:#000;color:var(--purple);}
+
+  /* Charset checkboxes */
+  .charset-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:8px;}
+  .cs-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#000;border:1px solid #1a0030;border-radius:3px;cursor:pointer;}
+  .cs-item input{display:none;}
+  .cs-dot{width:11px;height:11px;border:1px solid #660099;border-radius:2px;flex-shrink:0;transition:all 0.2s;position:relative;}
+  .cs-item input:checked ~ .cs-dot{background:var(--purple);border-color:var(--purple);box-shadow:0 0 5px var(--purple);}
+  .cs-item input:checked ~ .cs-dot::after{content:'✓';position:absolute;top:-2px;left:1px;font-size:9px;color:#000;}
+  .cs-label{font-size:11px;color:var(--text);}
+
+  /* Attack button */
+  .attack-btn{
+    width:100%;background:linear-gradient(135deg,#1a0030,#2a0050);
+    border:1px solid var(--purple);color:var(--purple);
+    font-family:'Orbitron',monospace;font-size:13px;font-weight:700;
+    letter-spacing:4px;padding:14px;border-radius:3px;cursor:pointer;
+    margin-top:12px;transition:all 0.3s;text-shadow:0 0 10px var(--purple);
+    position:relative;overflow:hidden;
+  }
+  .attack-btn:hover{background:linear-gradient(135deg,#2a0050,#3a0070);box-shadow:0 0 25px #cc00ff33;}
+  .attack-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .attack-btn.stop{border-color:var(--red);color:var(--red);background:linear-gradient(135deg,#1a0000,#2a0000);}
+
+  /* Progress */
+  .progress-wrap{margin-top:12px;}
+  .progress-bar{height:6px;background:#0a0015;border-radius:3px;overflow:hidden;margin-bottom:6px;}
+  #progressFill{height:100%;width:0%;background:linear-gradient(90deg,#8800aa,var(--purple),#ff00ff);border-radius:3px;transition:width 0.1s;box-shadow:0 0 8px var(--purple);}
+  .progress-info{display:flex;justify-content:space-between;font-size:10px;color:#8800aa;}
+
+  /* Live stats */
+  .live-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px;}
+  .ls-box{background:#000;border:1px solid #1a0030;border-radius:3px;padding:10px;text-align:center;}
+  .ls-val{font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:var(--purple);display:block;}
+  .ls-lbl{font-size:8px;color:#660099;letter-spacing:1px;margin-top:2px;display:block;}
+
+  /* Terminal */
+  #terminal{
+    background:#000;border:1px solid #1a0030;border-radius:3px;
+    padding:12px;height:260px;overflow-y:auto;
+    font-size:11px;line-height:1.8;
+  }
+  #terminal::-webkit-scrollbar{width:3px;}
+  #terminal::-webkit-scrollbar-thumb{background:#440066;border-radius:2px;}
+  .t-info{color:#660099;}
+  .t-try{color:#440066;}
+  .t-found{color:var(--green);font-weight:bold;}
+  .t-warn{color:var(--yellow);}
+  .t-error{color:var(--red);}
+  .t-purple{color:var(--purple);}
+  .t-head{color:var(--purple);border-bottom:1px solid #2a0050;padding-bottom:3px;margin-bottom:3px;}
+  .t-cyan{color:var(--cyan);}
+
+  /* Result box */
+  .result-box{
+    background:#000820;border:2px solid var(--green);border-radius:4px;
+    padding:16px;margin-top:12px;display:none;
+    animation:glow-green 1s ease;
+  }
+  .result-title{color:var(--green);font-family:'Orbitron',monospace;font-size:13px;letter-spacing:3px;margin-bottom:10px;}
+  .result-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #001a08;font-size:12px;}
+  .result-item:last-child{border-bottom:none;}
+  .result-key{color:#4a8a50;}
+  .result-val{color:var(--green);font-weight:bold;word-break:break-all;}
+
+  /* Wordlist display */
+  .wordlist-preview{
+    background:#000;border:1px solid #1a0030;border-radius:3px;
+    padding:10px;max-height:120px;overflow-y:auto;
+    font-size:10px;color:#660099;line-height:1.6;margin-top:8px;
+  }
+
+  /* Hash cracker */
+  .hash-types{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .hash-btn{
+    padding:5px 12px;background:#000;border:1px solid #1a0030;
+    border-radius:3px;cursor:pointer;font-family:'Share Tech Mono',monospace;
+    font-size:10px;color:#660099;letter-spacing:1px;transition:all 0.2s;
+  }
+  .hash-btn.active{border-color:var(--purple);color:var(--purple);background:#1a0030;}
+
+  /* Speed meter */
+  .speed-meter{margin-top:10px;}
+  .speed-track{height:4px;background:#0a0015;border-radius:2px;overflow:hidden;margin-bottom:4px;}
+  .speed-fill{height:100%;background:linear-gradient(90deg,#8800aa,#ff00ff);border-radius:2px;transition:width 0.3s;}
+  .speed-info{display:flex;justify-content:space-between;font-size:10px;color:#8800aa;}
+
+  /* Footer */
+  .footer{text-align:center;font-size:10px;color:#cc00ff22;margin-top:20px;letter-spacing:2px;}
+  .footer a{color:#8800aa;text-decoration:none;}
+
+  @keyframes fadeDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes glitch{
+    0%,100%{text-shadow:0 0 20px var(--purple),0 0 50px #8800aa;}
+    15%{text-shadow:-3px 0 var(--red),3px 0 var(--cyan);}
+    30%{text-shadow:3px 0 var(--purple),-3px 0 var(--red);}
+    50%{text-shadow:-2px 0 var(--cyan),2px 0 var(--purple);}
+  }
+  @keyframes pulse-red{0%,100%{box-shadow:0 0 5px #ff003c33}50%{box-shadow:0 0 15px #ff003c66}}
+  @keyframes glow-green{0%{box-shadow:0 0 0 #00ff41}100%{box-shadow:0 0 20px #00ff4166}}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  .blink{animation:blink 1s infinite;}
+
+  @media(max-width:420px){
+    .live-stats{grid-template-columns:repeat(2,1fr);}
+    .charset-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-tag">[ ADVANCED ATTACK SIMULATOR v3.0 ]</div>
+    <div class="logo">BRUTEFORCE<span>//</span>SIM</div>
+    <div class="subtitle">PASSWORD ATTACK SIMULATION ENGINE</div>
+    <div class="author-tag">by <a href="https://github.com/venu-maxx" target="_blank">venu-maxx</a> · github.com/venu-maxx</div>
+  </div>
+
+  <!-- Warning -->
+  <div class="warning-banner">
+    <div class="w-title">⚠ EDUCATIONAL DISCLAIMER ⚠</div>
+    <div class="w-text">This tool SIMULATES brute force attacks for educational purposes only.<br>
+    Using real brute force attacks without authorization is ILLEGAL. Authorized use only.</div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="panel">
+    <div class="panel-title">// SELECT ATTACK MODULE</div>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('bruteforce')">⚡ BRUTE FORCE</div>
+      <div class="tab" onclick="switchTab('dictionary')">📖 DICTIONARY</div>
+      <div class="tab" onclick="switchTab('hashcrack')">🔓 HASH CRACK</div>
+      <div class="tab" onclick="switchTab('pincrack')">🔢 PIN CRACK</div>
+    </div>
+
+    <!-- Brute Force Tab -->
+    <div class="tab-content active" id="tab-bruteforce">
+      <div class="inp-row">
+        <div class="inp-group">
+          <div class="inp-label">TARGET PASSWORD (to crack)</div>
+          <input class="inp" id="bf-target" type="text" placeholder="e.g. abc123" maxlength="8">
+        </div>
+        <div class="inp-group" style="max-width:130px">
+          <div class="inp-label">MAX LENGTH</div>
+          <input class="inp" id="bf-maxlen" type="number" value="4" min="1" max="8">
+        </div>
+      </div>
+      <div class="inp-label" style="margin-bottom:6px">CHARACTER SET</div>
+      <div class="charset-grid">
+        <label class="cs-item"><input type="checkbox" id="cs-lower" checked><div class="cs-dot"></div><span class="cs-label">Lowercase a-z (26)</span></label>
+        <label class="cs-item"><input type="checkbox" id="cs-upper"><div class="cs-dot"></div><span class="cs-label">Uppercase A-Z (26)</span></label>
+        <label class="cs-item"><input type="checkbox" id="cs-digits" checked><div class="cs-dot"></div><span class="cs-label">Digits 0-9 (10)</span></label>
+        <label class="cs-item"><input type="checkbox" id="cs-special"><div class="cs-dot"></div><span class="cs-label">Symbols !@#$ (32)</span></label>
+      </div>
+      <div class="inp-row" style="margin-top:10px">
+        <div class="inp-group">
+          <div class="inp-label">ATTACK SPEED</div>
+          <select class="inp" id="bf-speed">
+            <option value="0">⚡ MAX SPEED</option>
+            <option value="1" selected>🔥 FAST (1ms)</option>
+            <option value="5">💨 MEDIUM (5ms)</option>
+            <option value="20">🐢 SLOW (20ms)</option>
+          </select>
+        </div>
+        <div class="inp-group">
+          <div class="inp-label">DISPLAY MODE</div>
+          <select class="inp" id="bf-display">
+            <option value="all">Show All Attempts</option>
+            <option value="smart" selected>Smart (Every 50th)</option>
+            <option value="found">Only On Match</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dictionary Tab -->
+    <div class="tab-content" id="tab-dictionary">
+      <div class="inp-row">
+        <div class="inp-group">
+          <div class="inp-label">TARGET PASSWORD</div>
+          <input class="inp" id="dict-target" type="text" placeholder="e.g. password123">
+        </div>
+        <div class="inp-group" style="max-width:160px">
+          <div class="inp-label">WORDLIST</div>
+          <select class="inp" id="dict-wordlist">
+            <option value="top100">Top 100 Common</option>
+            <option value="rockyou">RockYou Style (500)</option>
+            <option value="custom">Custom List</option>
+          </select>
+        </div>
+      </div>
+      <div id="custom-words-wrap" style="display:none;margin-top:8px;">
+        <div class="inp-label">CUSTOM WORDLIST (one per line)</div>
+        <textarea class="inp" id="custom-words" rows="4" placeholder="password&#10;123456&#10;admin&#10;letmein" style="resize:vertical;margin-top:4px;"></textarea>
+      </div>
+      <div class="wordlist-preview" id="wordlist-preview">Select a wordlist to preview...</div>
+      <div class="inp-row" style="margin-top:8px;">
+        <div class="inp-group">
+          <div class="inp-label">ATTACK SPEED</div>
+          <select class="inp" id="dict-speed">
+            <option value="0">⚡ MAX SPEED</option>
+            <option value="2" selected>🔥 FAST</option>
+            <option value="10">💨 MEDIUM</option>
+          </select>
+        </div>
+        <div class="inp-group">
+          <div class="inp-label">MUTATION RULES</div>
+          <select class="inp" id="dict-mutate">
+            <option value="none">None</option>
+            <option value="basic" selected>Basic (123, !)</option>
+            <option value="advanced">Advanced (l33t, caps)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hash Crack Tab -->
+    <div class="tab-content" id="tab-hashcrack">
+      <div class="inp-group" style="margin-bottom:10px;">
+        <div class="inp-label">HASH TO CRACK</div>
+        <input class="inp" id="hash-input" type="text" placeholder="e.g. 5f4dcc3b5aa765d61d8327deb882cf99">
+      </div>
+      <div class="inp-label">HASH TYPE</div>
+      <div class="hash-types">
+        <div class="hash-btn active" onclick="selectHash(this,'md5')">MD5</div>
+        <div class="hash-btn" onclick="selectHash(this,'sha1')">SHA-1</div>
+        <div class="hash-btn" onclick="selectHash(this,'sha256')">SHA-256</div>
+        <div class="hash-btn" onclick="selectHash(this,'ntlm')">NTLM</div>
+        <div class="hash-btn" onclick="selectHash(this,'bcrypt')">bcrypt</div>
+      </div>
+      <div style="margin-top:10px">
+        <div class="inp-label">KNOWN HASH DATABASE</div>
+        <div class="wordlist-preview" style="margin-top:6px" id="hash-preview">
+MD5 "password"  → 5f4dcc3b5aa765d61d8327deb882cf99<br>
+MD5 "123456"    → e10adc3949ba59abbe56e057f20f883e<br>
+MD5 "admin"     → 21232f297a57a5a743894a0e4a801fc3<br>
+MD5 "qwerty"    → d8578edf8458ce06fbc5bb76a58c5ca4<br>
+MD5 "letmein"   → 0d107d09f5bbe40cade3de5c71e9e9b7<br>
+SHA1 "password" → 5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8
+        </div>
+      </div>
+    </div>
+
+    <!-- PIN Crack Tab -->
+    <div class="tab-content" id="tab-pincrack">
+      <div class="inp-row">
+        <div class="inp-group">
+          <div class="inp-label">TARGET PIN</div>
+          <input class="inp" id="pin-target" type="number" placeholder="e.g. 4821" min="0">
+        </div>
+        <div class="inp-group" style="max-width:140px">
+          <div class="inp-label">PIN LENGTH</div>
+          <select class="inp" id="pin-length">
+            <option value="4" selected>4-digit (10K)</option>
+            <option value="6">6-digit (1M)</option>
+            <option value="8">8-digit (100M)</option>
+          </select>
+        </div>
+        <div class="inp-group" style="max-width:140px">
+          <div class="inp-label">SPEED</div>
+          <select class="inp" id="pin-speed">
+            <option value="0">⚡ MAX</option>
+            <option value="1" selected>🔥 FAST</option>
+            <option value="5">💨 MED</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#660099;">
+        Simulates ATM / mobile PIN brute force attack patterns including sequential, random, and frequency-based attacks.
+      </div>
+    </div>
+
+    <button class="attack-btn" id="attackBtn" onclick="startAttack()">⚡ LAUNCH ATTACK</button>
+  </div>
+
+  <!-- Progress & Stats -->
+  <div class="panel">
+    <div class="panel-title">// ATTACK METRICS <span class="blink" id="attackCursor" style="display:none">█</span></div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div id="progressFill"></div></div>
+      <div class="progress-info"><span id="progressText">Idle</span><span id="progressPct">0%</span></div>
+    </div>
+    <div class="speed-meter" style="margin-top:10px;">
+      <div class="speed-track"><div class="speed-fill" id="speedFill" style="width:0%"></div></div>
+      <div class="speed-info"><span>ATTEMPTS/SEC</span><span id="apsVal">0</span></div>
+    </div>
+    <div class="live-stats">
+      <div class="ls-box"><span class="ls-val" id="st-attempts">0</span><span class="ls-lbl">ATTEMPTS</span></div>
+      <div class="ls-box"><span class="ls-val" id="st-aps" style="color:var(--cyan)">0</span><span class="ls-lbl">ATT/SEC</span></div>
+      <div class="ls-box"><span class="ls-val" id="st-elapsed">0s</span><span class="ls-lbl">ELAPSED</span></div>
+      <div class="ls-box"><span class="ls-val" id="st-eta">—</span><span class="ls-lbl">ETA</span></div>
+    </div>
+  </div>
+
+  <!-- Terminal -->
+  <div class="panel">
+    <div class="panel-title">// ATTACK LOG</div>
+    <div id="terminal">
+      <div class="t-info">[ BRUTEFORCE//SIM v3.0 — by venu-maxx ]</div>
+      <div class="t-info">[ github.com/venu-maxx ]</div>
+      <div class="t-info">─────────────────────────────────────────</div>
+      <div class="t-info">Select attack mode and configure target.</div>
+      <div class="t-warn">⚠ EDUCATIONAL SIMULATION ONLY.</div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-box" id="resultBox">
+    <div class="result-title">🔓 PASSWORD CRACKED!</div>
+    <div id="resultContent"></div>
+  </div>
+
+  <div class="footer">
+    [ ETHICAL USE ONLY ] · <a href="https://github.com/venu-maxx" target="_blank">github.com/venu-maxx</a> · BRUTEFORCE//SIM v3.0
+  </div>
+</div>
+
+<script>
+// ── Matrix (purple theme) ─────────────────────────────────
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+let drops;
+function initMatrix(){
+  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+  drops=Array(Math.floor(canvas.width/16)).fill(1);
+}
+function drawMatrix(){
+  ctx.fillStyle='rgba(4,0,10,0.05)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#cc00ff'; ctx.font='13px Share Tech Mono';
+  drops.forEach((y,i)=>{
+    ctx.fillText(String.fromCharCode(0x30A0+Math.random()*96),i*16,y*16);
+    if(y*16>canvas.height&&Math.random()>0.975) drops[i]=0;
+    drops[i]++;
+  });
+}
+initMatrix(); window.addEventListener('resize',initMatrix); setInterval(drawMatrix,50);
+
+// ── Wordlists ─────────────────────────────────────────────
+const WORDLISTS = {
+  top100: ['123456','password','123456789','12345678','12345','1234567','1234567890','qwerty','abc123','million2','000000','1234','iloveyou','aaron431','password1','qqww1122','123123','omgpop','123321','654321','qwertyuiop','qwerty123','admin','password123','letmein','welcome','monkey','dragon','master','hello','shadow','sunshine','princess','football','charlie','donald','password2','qwerty1','111111','iloveyou1','000000','1q2w3e4r','pass','love','admin123','mysql','test','root','toor','abc','pass123','1q2w3e','superman','michael','whatever','jessica','batman','trustno1','pass@123','matrix','secret','cheese','ranger','solo','maggie','hockey','1234qwer','access','flower','george','andrea','696969','asshole','hunter','joshua','sparky','q1w2e3r4','baseball','liverpool','dallas','ferrari','arsenal','harley','winter','tigger','snoopy','thunder','cookie','jessica','oscar','change','pass1','buster','zxcvbn','qazwsx','pa55word','abc1234'],
+  rockyou: []
+};
+
+// Generate rockyou-style
+(function(){
+  const base=['password','qwerty','abc','love','admin','user','test','root','pass','key','hack','fire','rock','star','moon','sun','sky','blue','red','cat','dog','fish','lion','tiger','eagle','wolf','bear','fox','crow','hawk'];
+  const suffixes=['','1','12','123','1234','!','@','#','2','21','321','111','2023','2024','01','007','99','69','420'];
+  base.forEach(w=>{
+    suffixes.forEach(s=>{ WORDLISTS.rockyou.push(w+s); });
+    WORDLISTS.rockyou.push(w.toUpperCase());
+    WORDLISTS.rockyou.push(w[0].toUpperCase()+w.slice(1));
+  });
+})();
+
+// ── Hash database ─────────────────────────────────────────
+const HASH_DB = {
+  md5: {
+    '5f4dcc3b5aa765d61d8327deb882cf99':'password',
+    'e10adc3949ba59abbe56e057f20f883e':'123456',
+    '21232f297a57a5a743894a0e4a801fc3':'admin',
+    'd8578edf8458ce06fbc5bb76a58c5ca4':'qwerty',
+    '0d107d09f5bbe40cade3de5c71e9e9b7':'letmein',
+    '827ccb0eea8a706c4c34a16891f84e7b':'12345',
+    '5ebe2294ecd0e0f08eab7690d2a6ee69':'secret',
+    '1a1dc91c907325c69271ddf0c944bc72':'pass',
+    'f25a2fc72690b780b2a14e140ef6a9e0':'iloveyou',
+    'ab56b4d92b40713acc5af89985d4b786':'abc',
+    '25d55ad283aa400af464c76d713c07ad':'12345678',
+    '7c6a180b36896a0a8c02787eeafb0e4c':'password1',
+  },
+  sha1: {
+    '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8':'password',
+    '7c4a8d09ca3762af61e59520943dc26494f8941b':'123456',
+    'd033e22ae348aeb5660fc2140aec35850c4da997':'admin',
+    'b1b3773a05c0ed0176787a4f1574ff0075f7521e':'qwerty',
+  },
+  sha256: {
+    '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8':'password',
+    '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92':'123456',
+    '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918':'admin',
+  },
+  ntlm: {
+    '8846f7eaee8fb117ad06bdd830b7586c':'password',
+    '32ed87bdb5fdc5e9cba88547376818d4':'123456',
+    'b4b9b02e6f09a9bd760f388b67351e2b':'qwerty',
+  }
+};
+
+// ── Helpers ───────────────────────────────────────────────
+const term = document.getElementById('terminal');
+function tLog(msg,cls='t-info'){
+  const d=document.createElement('div'); d.className=cls; d.innerHTML=msg;
+  term.appendChild(d); term.scrollTop=term.scrollHeight;
+}
+function tClear(){ term.innerHTML=''; }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+let currentTab = 'bruteforce';
+let attacking = false;
+let stopFlag = false;
+let startTime, attemptCount=0, apsInterval;
+
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const tabs=['bruteforce','dictionary','hashcrack','pincrack'];
+    t.classList.toggle('active', tabs[i]===tab);
+  });
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+}
+
+function selectHash(el, type){
+  document.querySelectorAll('.hash-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// Wordlist preview
+document.getElementById('dict-wordlist').addEventListener('change', function(){
+  const val=this.value;
+  const wrap=document.getElementById('custom-words-wrap');
+  const preview=document.getElementById('wordlist-preview');
+  if(val==='custom'){
+    wrap.style.display='block';
+    preview.innerHTML='Enter your custom wordlist above.';
+  } else {
+    wrap.style.display='none';
+    const wl = WORDLISTS[val] || WORDLISTS.top100;
+    preview.innerHTML=wl.slice(0,30).join(' · ')+` ... (+${wl.length-30} more)`;
+  }
+});
+
+// Update stats
+function updateStats(attempts, aps){
+  document.getElementById('st-attempts').textContent = attempts>=1000 ? (attempts/1000).toFixed(1)+'K' : attempts;
+  document.getElementById('st-aps').textContent = aps>=1000 ? (aps/1000).toFixed(1)+'K' : aps;
+  const elapsed = ((Date.now()-startTime)/1000).toFixed(1);
+  document.getElementById('st-elapsed').textContent = elapsed+'s';
+  document.getElementById('apsVal').textContent = aps;
+  document.getElementById('speedFill').style.width = Math.min((aps/5000)*100, 100)+'%';
+}
+
+function setETA(remaining, aps){
+  if(aps===0){ document.getElementById('st-eta').textContent='—'; return; }
+  const secs = remaining/aps;
+  if(secs<60) document.getElementById('st-eta').textContent=secs.toFixed(0)+'s';
+  else if(secs<3600) document.getElementById('st-eta').textContent=(secs/60).toFixed(1)+'m';
+  else document.getElementById('st-eta').textContent=(secs/3600).toFixed(1)+'h';
+}
+
+function setProgress(pct,text){
+  document.getElementById('progressFill').style.width=pct+'%';
+  document.getElementById('progressPct').textContent=pct.toFixed(1)+'%';
+  document.getElementById('progressText').textContent=text;
+}
+
+function showResult(found, attempts, elapsed, extra=''){
+  const box=document.getElementById('resultBox');
+  box.style.display='block';
+  document.getElementById('resultContent').innerHTML=`
+    <div class="result-item"><span class="result-key">PASSWORD</span><span class="result-val" style="color:#00ff41;font-size:18px;">${found}</span></div>
+    <div class="result-item"><span class="result-key">ATTEMPTS</span><span class="result-val">${attempts.toLocaleString()}</span></div>
+    <div class="result-item"><span class="result-key">TIME</span><span class="result-val">${elapsed}s</span></div>
+    <div class="result-item"><span class="result-key">AVG SPEED</span><span class="result-val">${Math.round(attempts/elapsed)} att/s</span></div>
+    ${extra}
+  `;
+  box.scrollIntoView({behavior:'smooth'});
+}
+
+// ── Brute Force Engine ────────────────────────────────────
+function buildCharset(){
+  let cs='';
+  if(document.getElementById('cs-lower').checked) cs+='abcdefghijklmnopqrstuvwxyz';
+  if(document.getElementById('cs-upper').checked) cs+='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  if(document.getElementById('cs-digits').checked) cs+='0123456789';
+  if(document.getElementById('cs-special').checked) cs+='!@#$%^&*()-_=+[]{}|;:,.<>?';
+  return cs;
+}
+
+function* bruteGen(charset, maxLen){
+  for(let len=1; len<=maxLen; len++){
+    const indices=Array(len).fill(0);
+    while(true){
+      yield indices.map(i=>charset[i]).join('');
+      let pos=len-1;
+      while(pos>=0){
+        indices[pos]++;
+        if(indices[pos]<charset.length) break;
+        indices[pos]=0; pos--;
+      }
+      if(pos<0) break;
+    }
+  }
+}
+
+async function runBruteForce(){
+  const target=document.getElementById('bf-target').value.trim();
+  const maxLen=parseInt(document.getElementById('bf-maxlen').value)||4;
+  const speed=parseInt(document.getElementById('bf-speed').value);
+  const display=document.getElementById('bf-display').value;
+  const charset=buildCharset();
+
+  if(!target){tLog('[ ERROR ] Enter target password!','t-error');return;}
+  if(!charset){tLog('[ ERROR ] Select at least one charset!','t-error');return;}
+
+  const total=Array.from({length:maxLen},(_, i)=>Math.pow(charset.length,i+1)).reduce((a,b)=>a+b,0);
+
+  tLog(`[ BRUTE FORCE MODE ]`,'t-head');
+  tLog(`[ TARGET  ] ${'*'.repeat(target.length)} (${target.length} chars)`);
+  tLog(`[ CHARSET ] ${charset.length} chars | Max len: ${maxLen}`);
+  tLog(`[ COMBOS  ] ~${total.toLocaleString()} combinations`);
+  tLog(`[ SPEED   ] ${speed===0?'MAX':speed+'ms delay'}`);
+  tLog(`─────────────────────────────────────────`);
+  await sleep(300);
+
+  const gen=bruteGen(charset,maxLen);
+  let count=0, batch=0, batchStart=Date.now();
+  let aps=0;
+
+  for(const attempt of gen){
+    if(stopFlag) break;
+    count++; attemptCount++;
+    batch++;
+
+    const pct=(count/total)*100;
+    setProgress(Math.min(pct,99.9), attempt);
+
+    if(Date.now()-batchStart>=500){
+      aps=Math.round(batch/((Date.now()-batchStart)/1000));
+      updateStats(count,aps);
+      setETA(total-count,aps);
+      batch=0; batchStart=Date.now();
+    }
+
+    if(display==='all' || (display==='smart' && count%50===0)){
+      tLog(`[ TRY ${String(count).padStart(6)} ] ${attempt}`,'t-try');
+    }
+
+    if(attempt===target){
+      const elapsed=((Date.now()-startTime)/1000).toFixed(2);
+      tLog(`[ 🔓 CRACKED! ] Password: "${attempt}" after ${count.toLocaleString()} attempts!`,'t-found');
+      setProgress(100,'CRACKED!');
+      updateStats(count, aps);
+      showResult(attempt, count, elapsed);
+      return;
+    }
+
+    if(speed>0) await sleep(speed);
+    else if(count%500===0) await sleep(0);
+  }
+
+  if(!stopFlag){
+    tLog(`[ FAILED ] Password not found in charset/length range.`,'t-warn');
+    tLog(`[ TIP ] Try larger charset or increase max length.`,'t-info');
+  }
+}
+
+// ── Dictionary Attack ─────────────────────────────────────
+function applyMutations(word, level){
+  const results=[word];
+  if(level==='none') return results;
+
+  // Basic mutations
+  results.push(word+'1', word+'123', word+'!', word+'@', '1'+word, word+'2024');
+  if(level==='advanced'){
+    // L33t speak
+    const leet=word.replace(/a/gi,'4').replace(/e/gi,'3').replace(/i/gi,'1').replace(/o/gi,'0').replace(/s/gi,'5');
+    results.push(leet, leet+'!', leet+'1');
+    // Capitalization variants
+    results.push(word.toUpperCase(), word[0].toUpperCase()+word.slice(1));
+    results.push(word+word, word.split('').reverse().join(''));
+  }
+  return [...new Set(results)];
+}
+
+async function runDictionary(){
+  const target=document.getElementById('dict-target').value.trim();
+  const wlType=document.getElementById('dict-wordlist').value;
+  const speed=parseInt(document.getElementById('dict-speed').value);
+  const mutate=document.getElementById('dict-mutate').value;
+
+  if(!target){tLog('[ ERROR ] Enter target password!','t-error');return;}
+
+  let wordlist;
+  if(wlType==='custom'){
+    const custom=document.getElementById('custom-words').value.trim();
+    wordlist=custom?custom.split('\n').map(w=>w.trim()).filter(Boolean):WORDLISTS.top100;
+  } else {
+    wordlist=WORDLISTS[wlType]||WORDLISTS.top100;
+  }
+
+  // Apply mutations
+  let fullList=[];
+  wordlist.forEach(w=>{ fullList.push(...applyMutations(w,mutate)); });
+  fullList=[...new Set(fullList)];
+
+  tLog(`[ DICTIONARY ATTACK ]`,'t-head');
+  tLog(`[ TARGET    ] ${'*'.repeat(target.length)} (${target.length} chars)`);
+  tLog(`[ WORDLIST  ] ${wordlist.length} words → ${fullList.length} with mutations`);
+  tLog(`[ MUTATION  ] ${mutate}`);
+  tLog(`─────────────────────────────────────────`);
+
+  let count=0, batch=0, batchStart=Date.now(), aps=0;
+
+  for(const word of fullList){
+    if(stopFlag) break;
+    count++; attemptCount++;
+    batch++;
+
+    const pct=(count/fullList.length)*100;
+    setProgress(pct, word);
+
+    if(Date.now()-batchStart>=500){
+      aps=Math.round(batch/((Date.now()-batchStart)/1000));
+      updateStats(count,aps);
+      setETA(fullList.length-count,aps);
+      batch=0; batchStart=Date.now();
+    }
+
+    if(count%20===0||count<=10) tLog(`[ TRY ${String(count).padStart(4)} ] ${word}`,'t-try');
+
+    if(word===target){
+      const elapsed=((Date.now()-startTime)/1000).toFixed(2);
+      tLog(`[ 🔓 CRACKED! ] "${word}" found at position #${count}!`,'t-found');
+      setProgress(100,'FOUND!');
+      updateStats(count,aps);
+      showResult(word, count, elapsed, `<div class="result-item"><span class="result-key">WORDLIST POS</span><span class="result-val">#${count}</span></div>`);
+      return;
+    }
+
+    if(speed>0) await sleep(speed);
+    else if(count%1000===0) await sleep(0);
+  }
+
+  if(!stopFlag){
+    tLog(`[ FAILED ] "${target}" not found in wordlist.`,'t-warn');
+    tLog(`[ TIP ] Try RockYou wordlist or enable Advanced mutations.`,'t-info');
+  }
+}
+
+// ── Hash Cracker ──────────────────────────────────────────
+async function runHashCrack(){
+  const hash=document.getElementById('hash-input').value.trim().toLowerCase();
+  const hashType=document.querySelector('.hash-btn.active').textContent.toLowerCase().replace('-','').replace(' ','');
+
+  if(!hash){tLog('[ ERROR ] Enter hash to crack!','t-error');return;}
+
+  tLog(`[ HASH CRACKER ]`,'t-head');
+  tLog(`[ HASH  ] ${hash}`);
+  tLog(`[ TYPE  ] ${hashType.toUpperCase()}`);
+  tLog(`[ MODE  ] Rainbow Table + Dictionary`);
+  tLog(`─────────────────────────────────────────`);
+
+  await sleep(500);
+  tLog(`[*] Checking rainbow tables...`,'t-cyan');
+  await sleep(800);
+
+  // Check rainbow table
+  const db=HASH_DB[hashType]||{};
+  if(db[hash]){
+    const elapsed=((Date.now()-startTime)/1000).toFixed(2);
+    tLog(`[ 🔓 FOUND in rainbow table! ] "${db[hash]}"`,'t-found');
+    setProgress(100,'CRACKED!');
+    updateStats(1,1);
+    showResult(db[hash], 1, elapsed, `<div class="result-item"><span class="result-key">METHOD</span><span class="result-val">Rainbow Table</span></div>`);
+    return;
+  }
+
+  tLog(`[*] Not in rainbow table. Trying dictionary...`,'t-cyan');
+  await sleep(300);
+
+  // Dictionary attack on hash (simulated)
+  const allWords=[...WORDLISTS.top100,...WORDLISTS.rockyou.slice(0,200)];
+  let count=0;
+  for(const word of allWords){
+    if(stopFlag) break;
+    count++; attemptCount++;
+    setProgress((count/allWords.length)*100, word);
+    if(count%30===0) tLog(`[ TRY ${count} ] Testing: ${word}...`,'t-try');
+    updateStats(count, count);
+    if(count%200===0) await sleep(1);
+  }
+
+  tLog(`[ FAILED ] Hash not found in database.`,'t-warn');
+  tLog(`[ INFO ] Try online tools like CrackStation for larger databases.`,'t-info');
+}
+
+// ── PIN Cracker ───────────────────────────────────────────
+async function runPinCrack(){
+  const targetPin=document.getElementById('pin-target').value.trim();
+  const pinLen=parseInt(document.getElementById('pin-length').value);
+  const speed=parseInt(document.getElementById('pin-speed').value);
+
+  if(!targetPin){tLog('[ ERROR ] Enter target PIN!','t-error');return;}
+
+  const maxVal=Math.pow(10,pinLen);
+  const target=targetPin.padStart(pinLen,'0');
+
+  tLog(`[ PIN BRUTE FORCE ]`,'t-head');
+  tLog(`[ TARGET ] ${'*'.repeat(pinLen)} (${pinLen} digits)`);
+  tLog(`[ RANGE  ] 0 to ${maxVal.toLocaleString()}`);
+  tLog(`[ STYLE  ] Sequential → Frequency-based`);
+  tLog(`─────────────────────────────────────────`);
+
+  let count=0, batch=0, batchStart=Date.now(), aps=0;
+
+  for(let i=0;i<maxVal;i++){
+    if(stopFlag) break;
+    const attempt=String(i).padStart(pinLen,'0');
+    count++; attemptCount++;
+    batch++;
+
+    const pct=(count/maxVal)*100;
+    if(count%100===0) setProgress(pct, attempt);
+
+    if(Date.now()-batchStart>=500){
+      aps=Math.round(batch/((Date.now()-batchStart)/1000));
+      updateStats(count,aps);
+      setETA(maxVal-count,aps);
+      batch=0; batchStart=Date.now();
+    }
+
+    if(count%500===0) tLog(`[ TRY ${String(count).padStart(6)} ] PIN: ${attempt}`,'t-try');
+
+    if(attempt===target){
+      const elapsed=((Date.now()-startTime)/1000).toFixed(2);
+      tLog(`[ 🔓 PIN CRACKED! ] "${attempt}" found at attempt #${count}!`,'t-found');
+      setProgress(100,'CRACKED!');
+      updateStats(count,aps);
+      showResult(attempt, count, elapsed, `<div class="result-item"><span class="result-key">PIN TYPE</span><span class="result-val">${pinLen}-digit</span></div>`);
+      return;
+    }
+
+    if(speed>0) await sleep(speed);
+    else if(count%2000===0) await sleep(0);
+  }
+
+  if(!stopFlag){
+    tLog(`[ FAILED ] PIN not found.`,'t-warn');
+  }
+}
+
+// ── Main Start ────────────────────────────────────────────
+async function startAttack(){
+  if(attacking){
+    stopFlag=true;
+    document.getElementById('attackBtn').textContent='⚡ LAUNCH ATTACK';
+    document.getElementById('attackBtn').classList.remove('stop');
+    document.getElementById('attackCursor').style.display='none';
+    attacking=false;
+    tLog('[ STOPPED ] Attack terminated by user.','t-warn');
+    return;
+  }
+
+  attacking=true; stopFlag=false;
+  startTime=Date.now(); attemptCount=0;
+  document.getElementById('attackBtn').textContent='⛔ STOP ATTACK';
+  document.getElementById('attackBtn').classList.add('stop');
+  document.getElementById('attackCursor').style.display='inline';
+  document.getElementById('resultBox').style.display='none';
+
+  tClear();
+  tLog(`[ BRUTEFORCE//SIM v3.0 — venu-maxx ]`,'t-head');
+  tLog(`[ TIME ] ${new Date().toLocaleTimeString()}`);
+  tLog(`[ MODE ] ${currentTab.toUpperCase()}`);
+  tLog(`⚠ Educational simulation only!`,'t-warn');
+
+  try {
+    if(currentTab==='bruteforce') await runBruteForce();
+    else if(currentTab==='dictionary') await runDictionary();
+    else if(currentTab==='hashcrack') await runHashCrack();
+    else if(currentTab==='pincrack') await runPinCrack();
+  } catch(e){
+    tLog(`[ ERROR ] ${e.message}`,'t-error');
+  }
+
+  attacking=false;
+  document.getElementById('attackBtn').textContent='⚡ LAUNCH ATTACK';
+  document.getElementById('attackBtn').classList.remove('stop');
+  document.getElementById('attackCursor').style.display='none';
+
+  const elapsed=((Date.now()-startTime)/1000).toFixed(2);
+  tLog(`─────────────────────────────────────────`);
+  tLog(`[ DONE ] Total time: ${elapsed}s | Attempts: ${attemptCount.toLocaleString()}`,'t-purple');
+}
+
+// Init wordlist preview
+document.getElementById('wordlist-preview').innerHTML =
+  WORDLISTS.top100.slice(0,30).join(' · ')+` ... (+${WORDLISTS.top100.length-30} more)`;
+</script>
+</body>
+</html>
